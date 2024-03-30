@@ -90,7 +90,7 @@ class _CameraScreenState extends State<CameraScreen> {
     await controller!.initialize();
     setState(() {});
 
-    Timer.periodic(const Duration(seconds: 3), (timer) async {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
       try{
         final image = await controller!.takePicture();
         final compressedImageBytes = compressImage(image.path);
