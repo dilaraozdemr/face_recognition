@@ -14,6 +14,7 @@ enum DetectionStatus { noFace, fail, success }
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const MyApp());
 }
 
