@@ -38,6 +38,8 @@ dependencies:
   camera: ^0.10.5+9
   web_socket_channel: ^2.4.0
   image: ^4.0.17
+  record: ^5.0.5
+
 
 dev_dependencies:
   flutter_test:

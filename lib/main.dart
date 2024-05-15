@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:face_recognition/mic_page.dart';
 import 'package:flutter/material.dart';
+import 'package:record/record.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:image/image.dart' as img;
 
-enum DetectionStatus {noFace, fail, success}
+enum DetectionStatus { noFace, fail, success }
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +24,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Face Recognition Application',
-      theme: ThemeData(
-          useMaterial3: true
-      ),
-      home: const CameraScreen(),
+      theme: ThemeData(useMaterial3: true),
+      home: const MicPage(),
     );
   }
 }
@@ -41,32 +41,43 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraController? controller;
   late WebSocketChannel channel;
   DetectionStatus? status;
+  double rightEye = 0.0;
+  double leftEye = 0.0;
+  String sleepStatus = "";
+  AudioRecorder myRecording = AudioRecorder();
+  Timer? timer;
 
-  String get currentStatus {
-    if(status == null) {
-      return "Initializing...";
-    }
-    switch(status!){
-      case DetectionStatus.noFace:
-        return "No Face Detected in the screen";
-      case DetectionStatus.fail:
-        return "Unrecognized Face Detected";
-      case DetectionStatus.success:
-        return "Hi, Yash!!";
+  double volume = 0.0;
+  double minVolume = -45.0;
+
+  startTimer() async {
+    timer ??=
+        Timer.periodic(Duration(milliseconds: 10), (timer) => updateVolume());
+  }
+
+  updateVolume() async {
+    Amplitude ampl = await myRecording.getAmplitude();
+    if (ampl.current > minVolume) {
+      setState(() {
+        volume = (ampl.current - minVolume) / minVolume;
+      });
+      print("Volume $volume");
     }
   }
 
-  Color get currentStatusColor {
-    if(status == null) {
-      return Colors.grey;
-    }
-    switch(status!){
-      case DetectionStatus.noFace:
-        return Colors.grey;
-      case DetectionStatus.fail:
-        return Colors.red;
-      case DetectionStatus.success:
-        return Colors.greenAccent;
+  int volumeOto(int maxVolumeToDisplay) {
+    return (volume * maxVolumeToDisplay).round().abs();
+  }
+
+  Future<bool> startRecording() async {
+    if (await myRecording.hasPermission()) {
+      if (!await myRecording.isRecording()) {
+        await myRecording.startStream(RecordConfig());
+      }
+      startTimer();
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -91,38 +102,28 @@ class _CameraScreenState extends State<CameraScreen> {
     setState(() {});
 
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      try{
+      try {
         final image = await controller!.takePicture();
         final compressedImageBytes = compressImage(image.path);
         channel.sink.add(compressedImageBytes);
-      }catch(_){}
+      } catch (_) {}
     });
   }
 
   void initializeWebSocket() {
     // 0.0.0.0 -> 10.0.2.2 (emulator)
     channel = IOWebSocketChannel.connect('ws://192.168.1.103:9000');
-    channel.stream.listen((dynamic data){
-      debugPrint(data);
-      data = jsonDecode(data);
-      if(data['data'] == null){
-        debugPrint('Server error occurred in recognizing face');
-        return;
-      }
-      switch(data['data']){
-        case 0:
-          status = DetectionStatus.noFace;
-          break;
-        case 1:
-          status = DetectionStatus.fail;
-          break;
-        case 2:
-          status = DetectionStatus.success;
-          break;
-        default:
-          status = DetectionStatus.noFace;
-          break;
-      }
+    channel.stream.listen((dynamic data) {
+      String jsonStr = data.toString();
+      Map<String, dynamic> parsedJson = json.decode(jsonStr);
+
+      double rightEyeRatio = parsedJson['right_eye_ratio'];
+      double leftEyeRatio = parsedJson['left_eye_ratio'];
+      rightEye = rightEyeRatio;
+      leftEye = leftEyeRatio;
+      print('Right Eye Ratio: $rightEyeRatio');
+      print('Left Eye Ratio: $leftEyeRatio');
+      checkSleep();
       setState(() {});
     }, onError: (dynamic error) {
       debugPrint('Error: $error');
@@ -131,9 +132,11 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  Uint8List compressImage(String imagePath, {int quality = 85}) {
-    final image = img.decodeImage(Uint8List.fromList(File(imagePath).readAsBytesSync()))!;
-    final compressedImage = img.encodeJpg(image, quality: quality); // lossless compression
+  Uint8List compressImage(String imagePath, {int quality = 100}) {
+    final image =
+        img.decodeImage(Uint8List.fromList(File(imagePath).readAsBytesSync()))!;
+    final compressedImage =
+        img.encodeJpg(image, quality: quality); // lossless compression
     return compressedImage;
   }
 
@@ -144,31 +147,67 @@ class _CameraScreenState extends State<CameraScreen> {
     super.dispose();
   }
 
+  checkSleep() {
+    if (leftEye + rightEye > 16) {
+      sleepStatus = "Sleeping Alert";
+    } else if (leftEye + rightEye > 8) {
+      sleepStatus = "Tired Alert";
+    } else if (leftEye + rightEye < 8) {
+      sleepStatus = "Active";
+    }
+  }
+
+  getColor() {
+    if (sleepStatus == "Sleeping Alert") {
+      return Colors.red;
+    } else if (sleepStatus == "Tired Alert") {
+      return Colors.orange;
+    } else if (sleepStatus == "Active") {
+      return Colors.green;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!(controller?.value.isInitialized ?? false)) {
       return const SizedBox();
     }
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: AspectRatio(
-            aspectRatio: controller!.value.aspectRatio,
-            child: CameraPreview(controller!),
-          ),
-        ),
-        Align(
-          alignment: const Alignment(0, .85),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                surfaceTintColor: currentStatusColor
+    return Scaffold(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: AspectRatio(
+              aspectRatio: controller!.value.aspectRatio,
+              child: CameraPreview(controller!),
             ),
-            child: Text(currentStatus, style: const TextStyle(fontSize: 20),),
-            onPressed: (){},
           ),
-        )
-      ],
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  sleepStatus,
+                  style: TextStyle(fontSize: 40, color: getColor()),
+                ),
+                FutureBuilder(
+                    future: startRecording(),
+                    builder: (context, AsyncSnapshot<bool> snapshot) {
+                     return  Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(snapshot.hasData
+                              ? volumeOto(100).toString()
+                              : "NO DATA"),
+                        ],
+                      );
+                    })
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }
