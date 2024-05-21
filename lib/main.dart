@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Face Recognition Application',
       theme: ThemeData(useMaterial3: true),
-      home: const MicPage(),
+      home: const CameraScreen(),
     );
   }
 }
@@ -45,6 +45,7 @@ class _CameraScreenState extends State<CameraScreen> {
   double rightEye = 0.0;
   double leftEye = 0.0;
   String sleepStatus = "";
+  String snoozingStatus = "";
   AudioRecorder myRecording = AudioRecorder();
   Timer? timer;
 
@@ -113,7 +114,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   void initializeWebSocket() {
     // 0.0.0.0 -> 10.0.2.2 (emulator)
-    channel = IOWebSocketChannel.connect('ws://192.168.1.103:9000');
+    channel = IOWebSocketChannel.connect('ws://192.168.1.101:9000');
     channel.stream.listen((dynamic data) {
       String jsonStr = data.toString();
       Map<String, dynamic> parsedJson = json.decode(jsonStr);
@@ -157,6 +158,15 @@ class _CameraScreenState extends State<CameraScreen> {
       sleepStatus = "Active";
     }
   }
+  checkSnoozing() {
+   if(volume>50){
+     snoozingStatus = "Snoozing";
+   }
+   else{
+     snoozingStatus = "Normal";
+   }
+
+  }
 
   getColor() {
     if (sleepStatus == "Sleeping Alert") {
@@ -199,8 +209,12 @@ class _CameraScreenState extends State<CameraScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(snapshot.hasData
+                              ? volumeOto(100)>50 ? "Snoozing" : "Normal"
+                              : "NO DATA"
+                            ,style: TextStyle(color: Colors.white,fontSize: 20, fontWeight: FontWeight.bold),),
+                          Text(snapshot.hasData
                               ? volumeOto(100).toString()
-                              : "NO DATA"),
+                              : "NO DATA",style: TextStyle(color: Colors.white,fontSize: 20),),
                         ],
                       );
                     })
