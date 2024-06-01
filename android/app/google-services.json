@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "639236534216",
+    "project_id": "sleepapnea-2f41e",
+    "storage_bucket": "sleepapnea-2f41e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:639236534216:android:c99a1c32c9117945079afd",
+        "android_client_info": {
+          "package_name": "com.example.face_recognition"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANzKrEy5YSg9msv0lAhi2ijciL6EI4Elk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
