@@ -1,16 +1,18 @@
-# face_recognition
+# Sleep Apnea Detection
 
-A new Flutter project.
+An application was developed in Flutter that helps detect if a person has sleep apnea with the support of artificial intelligence. It takes a photo of the user's eye and sends it to MediaPipe to determine whether the eye is open or closed. It also captures sound from the phone's microphone. Then, it categorizes this data using Firebase and helps determine if the user has sleep apnea.
 
-## Getting Started
+## Technologies Used
 
-This project is a starting point for a Flutter application.
+- **Flutter**
+- **GetX**
+- **MediaPipe**
+- **Python**
+- **WebSocket**
+- **Google ML Kit**
+- **Firebase**
+- **Camera**
+- **Record**
+- **Flutter Charts**
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+![Web Socket](https://github.com/user-attachments/assets/e1d01beb-17ba-4e95-a4e6-9840e02e871f)
